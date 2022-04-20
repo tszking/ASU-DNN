@@ -24,20 +24,23 @@ from sklearn import preprocessing
 #with open('mlogit_choice_data.pickle', 'rb') as data:
 #    data_dic = pickle.load(data)
 with open('data/mlogit_choice_data.pickle', 'rb') as data:
+# with open('code/data/mlogit_choice_data.pickle', 'rb') as data:
     data_dic = pickle.load(data)
 
 # use Train dataset
 df = data_dic['Train_wide']
 
-# divide into training_validation vs. testing set.
+# 打乱数据集顺序
 np.random.seed(100) # replicable
 n_index = df.shape[0]
 n_index_shuffle = np.arange(n_index)
 np.random.shuffle(n_index_shuffle)
 data_shuffled = df 
-data_shuffled = df.loc[n_index_shuffle, :]
 
-# replace values
+print(data_shuffled)
+data_shuffled = df.iloc[n_index_shuffle, :]
+
+# 将不同选择字符串映射为数字
 choice_name_dic = {}
 choice_name_dic['choice1'] = 0
 choice_name_dic['choice2'] = 1
@@ -49,7 +52,7 @@ data_shuffled_useful_vars=data_shuffled[useful_vars]
 data_shuffled_useful_vars.dropna(axis = 0, how = 'any', inplace = True)
 print(data_shuffled_useful_vars.columns)
 
-# normalize values
+# 数据集正则化
 X = preprocessing.scale(data_shuffled_useful_vars.iloc[:, 1:].values)
 Y = data_shuffled_useful_vars.iloc[:, 0].values
 
@@ -89,103 +92,101 @@ def generate_cross_validation_set(data, validation_index, df = True):
 
 
 # 
-X_train_validation = X[:np.int(n_index*5/6), :]
-X_test = X[np.int(n_index*5/6):, :]
+X_train_validation = X[:np.int(n_index*5/6), :]  # 取前5/6作为训练集/验证集
+X_test = X[np.int(n_index*5/6):, :] # 取后1/6作为测试集
 Y_train_validation = Y[:np.int(n_index*5/6)]
 Y_test = Y[np.int(n_index*5/6):]
 
 ############################################################
-############################################################
-### use other models as benchmarks
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.metrics import accuracy_score
-from sklearn.decomposition import PCA
-from sklearn.metrics import accuracy_score
+### Baseline 模型
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.neural_network import MLPClassifier
+# from sklearn.neighbors import KNeighborsClassifier
+# from sklearn.svm import SVC
+# from sklearn.gaussian_process import GaussianProcessClassifier
+# from sklearn.gaussian_process.kernels import RBF
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+# from sklearn.naive_bayes import GaussianNB
+# from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+# from sklearn.metrics import accuracy_score
+# from sklearn.decomposition import PCA
+# from sklearn.metrics import accuracy_score
 
-model_titles = ['MNL_with_l1_reg_medium',
-                'MNL_with_l2_reg_medium',
-                'Linear_SVM_medium',
-                'RBF_SVM_medium',
-                'Naive_Bayesian',
-                'KNN_3_medium',
-                'DT_medium',
-                'AdaBoost',
-                "QDA_medium"]
+# model_titles = ['MNL_with_l1_reg_medium',
+#                 'MNL_with_l2_reg_medium',
+#                 'Linear_SVM_medium',
+#                 'RBF_SVM_medium',
+#                 'Naive_Bayesian',
+#                 'KNN_3_medium',
+#                 'DT_medium',
+#                 'AdaBoost',
+#                 "QDA_medium"]
 
-model_list = [LogisticRegression(penalty = 'l1', C = 1, multi_class = 'multinomial', solver = 'saga'),
-              # larger C, weaker penalty
+# model_list = [LogisticRegression(penalty = 'l1', C = 1, multi_class = 'multinomial', solver = 'saga'),
+#               # larger C, weaker penalty
 
-              LogisticRegression(penalty = 'l2', C = 1, multi_class = 'multinomial', solver = 'newton-cg'),
-              # larger C, weaker penalty
+#               LogisticRegression(penalty = 'l2', C = 1, multi_class = 'multinomial', solver = 'newton-cg'),
+#               # larger C, weaker penalty
 
-              SVC(kernel = 'linear', C = 1),
-              # larger C, weaker penalty
+#               SVC(kernel = 'linear', C = 1),
+#               # larger C, weaker penalty
 
-              SVC(kernel = 'rbf', gamma=2, C = 1),
-              # larger C, weaker penalty
+#               SVC(kernel = 'rbf', gamma=2, C = 1),
+#               # larger C, weaker penalty
 
-              GaussianNB(),
-              # Naive Bayesian. Cannnot find regularization terms
+#               GaussianNB(),
+#               # Naive Bayesian. Cannnot find regularization terms
 
-              KNeighborsClassifier(n_neighbors = 3),
-              # n_neighbors, larger n_neighbors, more bias, similar to stronger penalty
+#               KNeighborsClassifier(n_neighbors = 3),
+#               # n_neighbors, larger n_neighbors, more bias, similar to stronger penalty
 
-              DecisionTreeClassifier(max_depth=5),
-              # smaller depth, more regularization
+#               DecisionTreeClassifier(max_depth=5),
+#               # smaller depth, more regularization
 
-              AdaBoostClassifier(),
-              # Boost classifer with Decision Tree as base. Cannot find regularization terms.
+#               AdaBoostClassifier(),
+#               # Boost classifer with Decision Tree as base. Cannot find regularization terms.
 
-              QuadraticDiscriminantAnalysis(reg_param = 1),
-              # reg_param, larger reg_param, stronger penalty
-              ]
+#               QuadraticDiscriminantAnalysis(reg_param = 1),
+#               # reg_param, larger reg_param, stronger penalty
+#               ]
 
-# 
-training_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
-validation_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
-testing_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
+# # 
+# training_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
+# validation_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
+# testing_accuracy_table = pd.DataFrame(np.zeros((len(model_list), 5)), index = model_titles)
 
-for j in range(5):
-    # five fold training with cross validation
-    X_train,X_validation = generate_cross_validation_set(X_train_validation, j, df = False)
-    Y_train,Y_validation = generate_cross_validation_set(Y_train_validation, j, df = False)
+# for j in range(5):
+#     # five fold training with cross validation
+#     X_train,X_validation = generate_cross_validation_set(X_train_validation, j, df = False)
+#     Y_train,Y_validation = generate_cross_validation_set(Y_train_validation, j, df = False)
 
-    ###
-    for name, model in zip(model_titles, model_list):    
-        print()
-        print("Training model ", name, " ...")
-        model.fit(X_train, Y_train)
-        # compute accuracy
-        training_accuracy = accuracy_score(model.predict(X_train), Y_train)
-        validation_accuracy = accuracy_score(model.predict(X_validation), Y_validation)
-        testing_accuracy = accuracy_score(model.predict(X_test), Y_test)
-        print("Its training accuracy is:", training_accuracy)
-        print("Its validation accuracy is:", validation_accuracy)
-        print("Its testing accuracy is:", testing_accuracy)
+#     ###
+#     for name, model in zip(model_titles, model_list):    
+#         print()
+#         print("Training model ", name, " ...")
+#         model.fit(X_train, Y_train)
+#         # compute accuracy
+#         training_accuracy = accuracy_score(model.predict(X_train), Y_train)
+#         validation_accuracy = accuracy_score(model.predict(X_validation), Y_validation)
+#         testing_accuracy = accuracy_score(model.predict(X_test), Y_test)
+#         print("Its training accuracy is:", training_accuracy)
+#         print("Its validation accuracy is:", validation_accuracy)
+#         print("Its testing accuracy is:", testing_accuracy)
 
-        training_accuracy_table.loc[name,j]=training_accuracy
-        validation_accuracy_table.loc[name,j]=validation_accuracy
-        testing_accuracy_table.loc[name,j]=testing_accuracy
+#         training_accuracy_table.loc[name,j]=training_accuracy
+#         validation_accuracy_table.loc[name,j]=validation_accuracy
+#         testing_accuracy_table.loc[name,j]=testing_accuracy
         
-### 
-classifiers_accuracy = {}
-classifiers_accuracy['training']=training_accuracy_table
-classifiers_accuracy['validation']=validation_accuracy_table
-classifiers_accuracy['testing']=testing_accuracy_table
+# ### 
+# classifiers_accuracy = {}
+# classifiers_accuracy['training']=training_accuracy_table
+# classifiers_accuracy['validation']=validation_accuracy_table
+# classifiers_accuracy['testing']=testing_accuracy_table
 
                     
 ############################################################
-############################################################
-# specify hyperparameter space for fully connected DNN
+# 全连接 DNN
 M_list = [1,2,3,4,5,6,7,8,9,10,11,12] # 5
 n_hidden_list = [60, 120, 240, 360, 480, 600] # 6
 l1_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
