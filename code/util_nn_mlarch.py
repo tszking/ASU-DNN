@@ -18,6 +18,7 @@ from sklearn.neural_network import MLPClassifier
 import tensorflow as tf
 import scipy.stats as ss
 import pickle
+from tensorflow.keras.backend import eval
 
 #%matplotlib inline
 ### need to code an DNN object that controls the local connectivity across input variables.
@@ -942,8 +943,10 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
 
     with tf.name_scope("cost"):
         # cost = tf.nn.l2_loss(Y, output_prob)
-        cost = tf.reduce_mean(tf.squared_difference(Y, output_prob), name='cost')
-        # cost = tf.keras.losses.MSE(Y, output_prob)
+        # cost = tf.reduce_mean(tf.squared_difference(Y, output_prob), name='cost')
+        cost = tf.keras.backend.sum(tf.keras.losses.MSE(Y, output_prob))
+        # print('###cost: ', end='')
+        # print(cost)
 
         # cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, labels=Y), name='cost')
         cost += tf.losses.get_regularization_loss()

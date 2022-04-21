@@ -6,6 +6,7 @@ import time
 import util_nn_mlarch as util
 from sklearn import preprocessing
 
+
 # starting time
 start_time = time.time()
 
@@ -30,6 +31,7 @@ data_shuffled = df.iloc[n_index_shuffle, :]
 
 data_shuffled_Truth = dfTruth[['od_ratio1', 'od_ratio2', 'od_ratio3', 'od_ratio4', 'od_ratio5']]
 data_shuffled_Truth = data_shuffled_Truth.iloc[n_index_shuffle, :]
+data_shuffled_Truth.fillna(0, inplace=True)
 
 useful_vars = ['transfer_time1', 'avg_time1', 'full_price1', 'via_stations1', 'hourly_cnt1',
                'transfer_time2', 'avg_time2', 'full_price2', 'via_stations2', 'hourly_cnt2',
@@ -134,10 +136,11 @@ l2_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
 dropout_rate_list = [0.5, 0.1, 0.01, 1e-3, 1e-5] # 5
 batch_normalization_list = [True, False] # 2
 learning_rate_list = [0.01, 1e-3, 1e-4, 1e-5] # 5
-n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
+# n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
+n_iteration_list = [5000, 10000, 50000, 100000, 200000] # 5
 n_mini_batch_list = [50, 100, 200, 500, 1000] # 5
 
-# random draw...and HPO
+# random draw...and HPO -- HyperParameter Optimization
 total_sample = 50 # could change...in total it has 250 training.
 sparse_dnn_dic = {}
 for i in range(total_sample):
