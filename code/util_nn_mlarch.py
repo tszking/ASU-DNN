@@ -952,9 +952,10 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         cost += tf.losses.get_regularization_loss()
         cost += regularization_penalty
 
-    # with tf.name_scope("eval"):
-    #     correct = tf.nn.in_top_k(output, Y, 1)  # 如果模型最大概率的选项为真实选项，则认为正确 Says whether the targets are in the top K predictions.
-    #     accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+    with tf.name_scope("eval"):
+        mse_validation = tf.keras.backend.mean(tf.keras.losses.MSE(Y, output_prob))
+        # correct = tf.nn.in_top_k(output, Y, 1)  # 如果模型最大概率的选项为真实选项，则认为正确 Says whether the targets are in the top K predictions.
+        # accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
     training_op = optimizer.minimize(cost)  # minimize the opt objective
@@ -964,25 +965,41 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     with tf.Session() as sess:
         # always run this to train the model
         init.run()
+        listTrainCost = []
+        listValidCost = []
         for i in range(n_iterations):
             if i % 500 == 0:
-                print("Epoch", i, "Cost = ",
-                      cost.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
-                                           Y: Y_train, Z: Z_train}))
+                # current_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
+                #                            Y: Y_train, Z: Z_train})
+                train_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
+                                                  Y: Y_train, Z: Z_train})
+                validation_mse = mse_validation.eval(
+                feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
+                        Y: Y_validation, Z: Z_validation})
+                print("Epoch", i, "train_mse = ", train_mse)
+                print("Epoch", i, "valid_mse = ", validation_mse)
+                listTrainCost.append(train_mse)
+                listValidCost.append(validation_mse)
+
             # gradient descent
             X0_batch, X1_batch, X2_batch, X3_batch, X4_batch, Z_batch, Y_batch = \
                 obtain_mini_batch_dnn_alt_specific(X0_train, X1_train, X2_train, X3_train, X4_train, Y_train, Z_train,
                                                    n_mini_batch)
             sess.run(training_op, feed_dict={X0: X0_batch, X1: X1_batch, X2: X2_batch, X3: X3_batch, X4: X4_batch,
                                              Y: Y_batch, Z: Z_batch})
+        
+        pd.DataFrame(listTrainCost).to_csv('train_mse.csv')
+        pd.DataFrame(listValidCost).to_csv('validation_mse.csv')
+        raise Exception
+
         ### compute prediction accuracy
-        # train_accuracy = accuracy.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
-        #                                           Y: Y_train, Z: Z_train})
-        # validation_accuracy = accuracy.eval(
-        #     feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
-        #                Y: Y_validation, Z: Z_validation})
-        # test_accuracy = accuracy.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
-        #                                          Y: Y_test, Z: Z_test})
+        train_accuracy = mse_eval.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
+                                                  Y: Y_train, Z: Z_train})
+        validation_accuracy = mse_eval.eval(
+            feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
+                       Y: Y_validation, Z: Z_validation})
+        test_accuracy = mse_eval.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
+                                                 Y: Y_test, Z: Z_test})
 
         ### compute probability curves by simulated data
         delta_cost = 0.01
@@ -1022,7 +1039,9 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
              Y: Y_data_ivt, Z: Z_data_ivt})
         prob_ivt = np.exp(util_matrix_ivt) / np.exp(util_matrix_ivt).sum(1)[:, np.newaxis]
     # return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
-    return None, None, None, prob_cost, prob_ivt
+    
+
+    return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
 
 
 ### build functions for mlogit Train datasets
