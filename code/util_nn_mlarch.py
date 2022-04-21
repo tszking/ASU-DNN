@@ -414,7 +414,8 @@ def standard_hidden_layer(input_, n_hidden, l1_const, dropout_rate, batch_normal
 
 
 def dnn_estimation(X_train, Y_train, X_validation, Y_validation, X_test, Y_test, 
-                   M, n_hidden, l1_const, l2_const, dropout_rate, batch_normalization, learning_rate, n_iterations, n_mini_batch, K = 5, 
+                   M, n_hidden, l1_const, l2_const,
+                   dropout_rate, batch_normalization, learning_rate, n_iterations, n_mini_batch, K = 5, 
                    Train = False):
     # repeat the standard_hidden_layer to construct one DNN architecture.
     
@@ -428,10 +429,13 @@ def dnn_estimation(X_train, Y_train, X_validation, Y_validation, X_test, Y_test,
     
     hidden = X
     
+    # M hidden layer for DNN
     for i in range(M):
         name = 'hidden'+str(i)
         hidden = standard_hidden_layer(hidden, n_hidden, l1_const, dropout_rate, batch_normalization, name)
-    output = tf.layers.dense(hidden, K, name = 'output')
+
+    utilities = tf.layers.dense(hidden, K, name = 'output')
+    output = tf.nn.softmax(utilities)
     
     # add l2 regularization here
     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
