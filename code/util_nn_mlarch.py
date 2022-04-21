@@ -413,170 +413,170 @@ def standard_hidden_layer(input_, n_hidden, l1_const, dropout_rate, batch_normal
     return hidden
 
 
-def dnn_estimation(X_train, Y_train, X_validation, Y_validation, X_test, Y_test, 
-                   M, n_hidden, l1_const, l2_const,
-                   dropout_rate, batch_normalization, learning_rate, n_iterations, n_mini_batch, K = 5, 
-                   Train = False):
-    # repeat the standard_hidden_layer to construct one DNN architecture.
+# def dnn_estimation(X_train, Y_train, X_validation, Y_validation, X_test, Y_test, 
+#                    M, n_hidden, l1_const, l2_const,
+#                    dropout_rate, batch_normalization, learning_rate, n_iterations, n_mini_batch, K = 5, 
+#                    Train = False):
+#     # repeat the standard_hidden_layer to construct one DNN architecture.
     
-    ### build DNN models here
-    tf.reset_default_graph() 
-    N, D = X_train.shape
-    # default
+#     ### build DNN models here
+#     tf.reset_default_graph() 
+#     N, D = X_train.shape
+#     # default
     
-    X = tf.placeholder(dtype = tf.float32, shape = (None, D), name = 'X')
-    Y = tf.placeholder(dtype = tf.int64, shape = (None), name = 'Y')
+#     X = tf.placeholder(dtype = tf.float32, shape = (None, D), name = 'X')
+#     Y = tf.placeholder(dtype = tf.int64, shape = (None), name = 'Y')
     
-    hidden = X
+#     hidden = X
     
-    # M hidden layer for DNN
-    for i in range(M):
-        name = 'hidden'+str(i)
-        hidden = standard_hidden_layer(hidden, n_hidden, l1_const, dropout_rate, batch_normalization, name)
+#     # M hidden layer for DNN
+#     for i in range(M):
+#         name = 'hidden'+str(i)
+#         hidden = standard_hidden_layer(hidden, n_hidden, l1_const, dropout_rate, batch_normalization, name)
 
-    utilities = tf.layers.dense(hidden, K, name = 'output')
-    output = tf.nn.softmax(utilities)
+#     utilities = tf.layers.dense(hidden, K, name = 'output')
+#     output = tf.nn.softmax(utilities)
     
-    # add l2 regularization here
-    l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
-    vars_ = tf.trainable_variables()
-    weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
-    regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
+#     # add l2 regularization here
+#     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
+#     vars_ = tf.trainable_variables()
+#     weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
+#     regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
 
-    with tf.name_scope("cost"):
-        cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits = output, labels = Y), name = 'cost')
-        cost += tf.losses.get_regularization_loss()
-        cost += regularization_penalty
+#     with tf.name_scope("cost"):
+#         cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits = output, labels = Y), name = 'cost')
+#         cost += tf.losses.get_regularization_loss()
+#         cost += regularization_penalty
         
-    with tf.name_scope("eval"):
-        correct = tf.nn.in_top_k(output, Y, 1)
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+#     with tf.name_scope("eval"):
+#         correct = tf.nn.in_top_k(output, Y, 1)
+#         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
     
-    optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate) # opt objective
-    training_op = optimizer.minimize(cost) # minimize the opt objective
-    init = tf.global_variables_initializer()  
+#     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate) # opt objective
+#     training_op = optimizer.minimize(cost) # minimize the opt objective
+#     init = tf.global_variables_initializer()  
         
 
-    ### estimate DNN models here
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
+#     ### estimate DNN models here
+#     config = tf.ConfigProto()
+#     config.gpu_options.allow_growth = True
 
-    with tf.Session(config=config) as sess:
-        # always run this to train the model
-        init.run()
-        for i in range(n_iterations):
-            if i % 500 == 0:
-                print("Epoch", i, "Cost = ", cost.eval(feed_dict = {X: X_train, Y: Y_train}))
+#     with tf.Session(config=config) as sess:
+#         # always run this to train the model
+#         init.run()
+#         for i in range(n_iterations):
+#             if i % 500 == 0:
+#                 print("Epoch", i, "Cost = ", cost.eval(feed_dict = {X: X_train, Y: Y_train}))
             
-            # gradient descent
-            X_batch, Y_batch = obtain_mini_batch(X_train, Y_train, n_mini_batch)
-            sess.run(training_op, feed_dict = {X: X_batch, Y: Y_batch})
-        train_accuracy = accuracy.eval(feed_dict = {X: X_train, Y: Y_train})
-        validation_accuracy = accuracy.eval(feed_dict = {X: X_validation, Y: Y_validation})
-        test_accuracy = accuracy.eval(feed_dict = {X: X_test, Y: Y_test})
+#             # gradient descent
+#             X_batch, Y_batch = obtain_mini_batch(X_train, Y_train, n_mini_batch)
+#             sess.run(training_op, feed_dict = {X: X_batch, Y: Y_batch})
+#         train_accuracy = accuracy.eval(feed_dict = {X: X_train, Y: Y_train})
+#         validation_accuracy = accuracy.eval(feed_dict = {X: X_validation, Y: Y_validation})
+#         test_accuracy = accuracy.eval(feed_dict = {X: X_test, Y: Y_test})
         
-        # compute choice probability curves
-        delta_cost = 0.01
-        delta_ivt = 0.01
+#         # compute choice probability curves
+#         delta_cost = 0.01
+#         delta_ivt = 0.01
         
-        drive_cost_idx = 19
-        drive_ivt_idx = 21
+#         drive_cost_idx = 19
+#         drive_ivt_idx = 21
         
-        if Train:
-            # actually not driving in Train dataset
-            drive_cost_idx = 0
-            drive_ivt_idx = 1
+#         if Train:
+#             # actually not driving in Train dataset
+#             drive_cost_idx = 0
+#             drive_ivt_idx = 1
         
-        N_cost = np.int((np.max(X_test[:,drive_cost_idx]) - np.min(X_test[:,drive_cost_idx]))/delta_cost) + 1
-        N_ivt = np.int((np.max(X_test[:,drive_ivt_idx]) - np.min(X_test[:,drive_ivt_idx]))/delta_ivt) + 1
-        data_cost = np.zeros((N_cost, D))
-        data_ivt = np.zeros((N_ivt, D))
-        data_cost[:, drive_cost_idx] = np.arange(np.min(X_test[:,drive_cost_idx]), np.max(X_test[:,drive_cost_idx]), 0.01)
-        data_ivt[:, drive_ivt_idx] = np.arange(np.min(X_test[:,drive_ivt_idx]), np.max(X_test[:,drive_ivt_idx]), 0.01)
+#         N_cost = np.int((np.max(X_test[:,drive_cost_idx]) - np.min(X_test[:,drive_cost_idx]))/delta_cost) + 1
+#         N_ivt = np.int((np.max(X_test[:,drive_ivt_idx]) - np.min(X_test[:,drive_ivt_idx]))/delta_ivt) + 1
+#         data_cost = np.zeros((N_cost, D))
+#         data_ivt = np.zeros((N_ivt, D))
+#         data_cost[:, drive_cost_idx] = np.arange(np.min(X_test[:,drive_cost_idx]), np.max(X_test[:,drive_cost_idx]), 0.01)
+#         data_ivt[:, drive_ivt_idx] = np.arange(np.min(X_test[:,drive_ivt_idx]), np.max(X_test[:,drive_ivt_idx]), 0.01)
 
-        # info for cost column
-        util_matrix_cost = output.eval(feed_dict = {X: data_cost}) 
-        prob_cost = np.exp(util_matrix_cost)/np.exp(util_matrix_cost).sum(1)[:,np.newaxis]
-        util_matrix_ivt = output.eval(feed_dict = {X: data_ivt})
-        prob_ivt = np.exp(util_matrix_ivt)/np.exp(util_matrix_ivt).sum(1)[:,np.newaxis]
+#         # info for cost column
+#         util_matrix_cost = output.eval(feed_dict = {X: data_cost}) 
+#         prob_cost = np.exp(util_matrix_cost)/np.exp(util_matrix_cost).sum(1)[:,np.newaxis]
+#         util_matrix_ivt = output.eval(feed_dict = {X: data_ivt})
+#         prob_ivt = np.exp(util_matrix_ivt)/np.exp(util_matrix_ivt).sum(1)[:,np.newaxis]
 
-    return train_accuracy,validation_accuracy,test_accuracy,prob_cost,prob_ivt
+#     return train_accuracy,validation_accuracy,test_accuracy,prob_cost,prob_ivt
 
 
-def full_dnn_elasticity(X_train, Y_train, X_validation, Y_validation, X_test, Y_test,
-                   M, n_hidden, l1_const, l2_const, dropout_rate, batch_normalization, learning_rate, n_iterations,
-                   n_mini_batch, index_for_var_elas, df_sp_test_nonstand, k_fold,top_n,var_list_index, K=5,
-                   Train=False):
-    # repeat the standard_hidden_layer to construct one DNN architecture.
+# def full_dnn_elasticity(X_train, Y_train, X_validation, Y_validation, X_test, Y_test,
+#                    M, n_hidden, l1_const, l2_const, dropout_rate, batch_normalization, learning_rate, n_iterations,
+#                    n_mini_batch, index_for_var_elas, df_sp_test_nonstand, k_fold,top_n,var_list_index, K=5,
+#                    Train=False):
+#     # repeat the standard_hidden_layer to construct one DNN architecture.
 
-    ### build DNN models here
-    tf.reset_default_graph()
-    N, D = X_train.shape
-    # default
+#     ### build DNN models here
+#     tf.reset_default_graph()
+#     N, D = X_train.shape
+#     # default
 
-    X = tf.placeholder(dtype=tf.float32, shape=(None, D), name='X')
-    Y = tf.placeholder(dtype=tf.int64, shape=(None), name='Y')
+#     X = tf.placeholder(dtype=tf.float32, shape=(None, D), name='X')
+#     Y = tf.placeholder(dtype=tf.int64, shape=(None), name='Y')
 
-    hidden = X
+#     hidden = X
 
-    for i in range(M):
-        name = 'hidden' + str(i)
-        hidden = standard_hidden_layer(hidden, n_hidden, l1_const, dropout_rate, batch_normalization, name)
-    output = tf.layers.dense(hidden, K, name='output')
+#     for i in range(M):
+#         name = 'hidden' + str(i)
+#         hidden = standard_hidden_layer(hidden, n_hidden, l1_const, dropout_rate, batch_normalization, name)
+#     output = tf.layers.dense(hidden, K, name='output')
 
-    # add l2 regularization here
-    l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
-    vars_ = tf.trainable_variables()
-    weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
-    regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
+#     # add l2 regularization here
+#     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
+#     vars_ = tf.trainable_variables()
+#     weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
+#     regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
 
-    with tf.name_scope("cost"):
-        cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, labels=Y), name='cost')
-        cost += tf.losses.get_regularization_loss()
-        cost += regularization_penalty
+#     with tf.name_scope("cost"):
+#         cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, labels=Y), name='cost')
+#         cost += tf.losses.get_regularization_loss()
+#         cost += regularization_penalty
 
-    with tf.name_scope("eval"):
-        correct = tf.nn.in_top_k(output, Y, 1)
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+#     with tf.name_scope("eval"):
+#         correct = tf.nn.in_top_k(output, Y, 1)
+#         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
 
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
-    training_op = optimizer.minimize(cost)  # minimize the opt objective
-    init = tf.global_variables_initializer()
+#     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
+#     training_op = optimizer.minimize(cost)  # minimize the opt objective
+#     init = tf.global_variables_initializer()
 
-    ### estimate DNN models here
+#     ### estimate DNN models here
 
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
+#     config = tf.ConfigProto()
+#     config.gpu_options.allow_growth = True
 
-    with tf.Session(config=config) as sess:
-        # always run this to train the model
-        init.run()
-        for i in range(n_iterations):
-            if i % 500 == 0:
-                print("Epoch", i, "Cost = ", cost.eval(feed_dict={X: X_train, Y: Y_train}))
+#     with tf.Session(config=config) as sess:
+#         # always run this to train the model
+#         init.run()
+#         for i in range(n_iterations):
+#             if i % 500 == 0:
+#                 print("Epoch", i, "Cost = ", cost.eval(feed_dict={X: X_train, Y: Y_train}))
 
-            # gradient descent
-            X_batch, Y_batch = obtain_mini_batch(X_train, Y_train, n_mini_batch)
-            sess.run(training_op, feed_dict={X: X_batch, Y: Y_batch})
+#             # gradient descent
+#             X_batch, Y_batch = obtain_mini_batch(X_train, Y_train, n_mini_batch)
+#             sess.run(training_op, feed_dict={X: X_batch, Y: Y_batch})
 
-        elast_records = {'K-fold': [k_fold]}
-        model_name = 'full_dnn_top_' + str(top_n)
-        elast_records['Model_name']=[model_name]
-        delta_increase = 0.001
-        util_matrix_old = output.eval(feed_dict={X: X_test})
-        prob_old = np.exp(util_matrix_old) / np.exp(util_matrix_old).sum(1)[:, np.newaxis]
-        for idx in index_for_var_elas:
-            data_increase = np.copy(X_test)
-            data_increase[:,idx] += delta_increase
-            util_matrix_new = output.eval(feed_dict={X: data_increase})
-            prob_new = np.exp(util_matrix_new) / np.exp(util_matrix_new).sum(1)[:, np.newaxis]
-            for mode in range(K):
-                var_name = var_list_index[idx + 1]
-                elasticity_individual = (prob_new[:,mode] - prob_old[:,mode]) / prob_old[:,mode] / delta_increase * df_sp_test_nonstand.loc[:, var_name] / df_sp_test_nonstand.loc[:, var_name].std()
-                elasticity = np.mean(elasticity_individual)
-                elast_records[str(mode) + '___' + var_name] = [elasticity]
+#         elast_records = {'K-fold': [k_fold]}
+#         model_name = 'full_dnn_top_' + str(top_n)
+#         elast_records['Model_name']=[model_name]
+#         delta_increase = 0.001
+#         util_matrix_old = output.eval(feed_dict={X: X_test})
+#         prob_old = np.exp(util_matrix_old) / np.exp(util_matrix_old).sum(1)[:, np.newaxis]
+#         for idx in index_for_var_elas:
+#             data_increase = np.copy(X_test)
+#             data_increase[:,idx] += delta_increase
+#             util_matrix_new = output.eval(feed_dict={X: data_increase})
+#             prob_new = np.exp(util_matrix_new) / np.exp(util_matrix_new).sum(1)[:, np.newaxis]
+#             for mode in range(K):
+#                 var_name = var_list_index[idx + 1]
+#                 elasticity_individual = (prob_new[:,mode] - prob_old[:,mode]) / prob_old[:,mode] / delta_increase * df_sp_test_nonstand.loc[:, var_name] / df_sp_test_nonstand.loc[:, var_name].std()
+#                 elasticity = np.mean(elasticity_individual)
+#                 elast_records[str(mode) + '___' + var_name] = [elasticity]
 
-    return pd.DataFrame(elast_records)
+#     return pd.DataFrame(elast_records)
 #
 ##### training here.
 #df_sp_train = pd.read_csv('../data/data_AV_Singapore_v1_sp_train.csv')
@@ -862,6 +862,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     N, D3 = X3_train.shape
     N, D4 = X4_train.shape
     N, DZ = Z_train.shape
+    N, DY = Y_train.shape
 
     # K = 5 # default
 
@@ -871,7 +872,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     X3 = tf.placeholder(dtype=tf.float32, shape=(None, D3), name='X3')
     X4 = tf.placeholder(dtype=tf.float32, shape=(None, D4), name='X4')
     Z = tf.placeholder(dtype=tf.float32, shape=(None, DZ), name='Z')
-    Y = tf.placeholder(dtype=tf.int64, shape=(None), name='Y')
+    Y = tf.placeholder(dtype=tf.float32, shape=(None, DY), name='Y')
 
     hidden_x0 = X0
     hidden_x1 = X1
@@ -931,6 +932,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         hidden_dic[layer_name] = output_j
     output = tf.concat([hidden_dic['x0'], hidden_dic['x1'], hidden_dic['x2'], hidden_dic['x3'], hidden_dic['x4']],
                        axis=1, name='output')
+    output_prob = tf.nn.softmax(output)
 
     # add l2 regularization here
     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
@@ -939,13 +941,17 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
 
     with tf.name_scope("cost"):
-        cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, labels=Y), name='cost')
+        # cost = tf.nn.l2_loss(Y, output_prob)
+        cost = tf.reduce_mean(tf.squared_difference(Y, output_prob), name='cost')
+        # cost = tf.keras.losses.MSE(Y, output_prob)
+
+        # cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, labels=Y), name='cost')
         cost += tf.losses.get_regularization_loss()
         cost += regularization_penalty
 
-    with tf.name_scope("eval"):
-        correct = tf.nn.in_top_k(output, Y, 1)
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+    # with tf.name_scope("eval"):
+    #     correct = tf.nn.in_top_k(output, Y, 1)  # 如果模型最大概率的选项为真实选项，则认为正确 Says whether the targets are in the top K predictions.
+    #     accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
     training_op = optimizer.minimize(cost)  # minimize the opt objective
@@ -967,13 +973,13 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
             sess.run(training_op, feed_dict={X0: X0_batch, X1: X1_batch, X2: X2_batch, X3: X3_batch, X4: X4_batch,
                                              Y: Y_batch, Z: Z_batch})
         ### compute prediction accuracy
-        train_accuracy = accuracy.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
-                                                  Y: Y_train, Z: Z_train})
-        validation_accuracy = accuracy.eval(
-            feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
-                       Y: Y_validation, Z: Z_validation})
-        test_accuracy = accuracy.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
-                                                 Y: Y_test, Z: Z_test})
+        # train_accuracy = accuracy.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
+        #                                           Y: Y_train, Z: Z_train})
+        # validation_accuracy = accuracy.eval(
+        #     feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
+        #                Y: Y_validation, Z: Z_validation})
+        # test_accuracy = accuracy.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
+        #                                          Y: Y_test, Z: Z_test})
 
         ### compute probability curves by simulated data
         delta_cost = 0.01
@@ -1001,8 +1007,8 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         X4_data_ivt = np.zeros((N_ivt, D4))
         Z_data_cost = np.zeros((N_cost, DZ))
         Z_data_ivt = np.zeros((N_ivt, DZ))
-        Y_data_cost = np.zeros(N_cost)
-        Y_data_ivt = np.zeros(N_ivt)
+        Y_data_cost = np.zeros((N_cost, DY))
+        Y_data_ivt = np.zeros((N_ivt, DY))   
         # compute util and prob curves
         util_matrix_cost = output.eval(
             {X0: X0_data_cost, X1: X1_data_cost, X2: X2_data_cost, X3: X3_data_cost, X4: X4_data_cost,
@@ -1012,7 +1018,8 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
             {X0: X0_data_ivt, X1: X1_data_ivt, X2: X2_data_ivt, X3: X3_data_ivt, X4: X4_data_ivt,
              Y: Y_data_ivt, Z: Z_data_ivt})
         prob_ivt = np.exp(util_matrix_ivt) / np.exp(util_matrix_ivt).sum(1)[:, np.newaxis]
-    return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
+    # return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
+    return None, None, None, prob_cost, prob_ivt
 
 
 ### build functions for mlogit Train datasets
@@ -1029,110 +1036,110 @@ def obtain_mini_batch_dnn_alt_specific_train(X0,X1,Y,n_mini_batch):
     return X0_batch, X1_batch, Y_batch
 
 
-def dnn_alt_spec_estimation_train(X0_train,X1_train,Y_train,
-                                  X0_validation,X1_validation,Y_validation,
-                                  X0_test,X1_test,Y_test,
-                                  M,n_hidden,l1_const,l2_const,
-                                  dropout_rate,batch_normalization,learning_rate,n_iterations,n_mini_batch,
-                                  K=2):
-    '''
-    This function specifies DNN with alternative specific utility
-    It performs estimation and prediction
-    '''
-    tf.reset_default_graph()
-    N, D0 = X0_train.shape
-    N, D1 = X1_train.shape
+# def dnn_alt_spec_estimation_train(X0_train,X1_train,Y_train,
+#                                   X0_validation,X1_validation,Y_validation,
+#                                   X0_test,X1_test,Y_test,
+#                                   M,n_hidden,l1_const,l2_const,
+#                                   dropout_rate,batch_normalization,learning_rate,n_iterations,n_mini_batch,
+#                                   K=2):
+#     '''
+#     This function specifies DNN with alternative specific utility
+#     It performs estimation and prediction
+#     '''
+#     tf.reset_default_graph()
+#     N, D0 = X0_train.shape
+#     N, D1 = X1_train.shape
     
-    #K = 5 # default
+#     #K = 5 # default
     
-    X0 = tf.placeholder(dtype = tf.float32, shape = (None, D0), name = 'X0')
-    X1 = tf.placeholder(dtype = tf.float32, shape = (None, D1), name = 'X1')
-    Y = tf.placeholder(dtype = tf.int64, shape = (None), name = 'Y')
+#     X0 = tf.placeholder(dtype = tf.float32, shape = (None, D0), name = 'X0')
+#     X1 = tf.placeholder(dtype = tf.float32, shape = (None, D1), name = 'X1')
+#     Y = tf.placeholder(dtype = tf.int64, shape = (None), name = 'Y')
     
-    hidden_x0 = X0
-    hidden_x1 = X1
+#     hidden_x0 = X0
+#     hidden_x1 = X1
     
-    hidden_dic = {}
-    hidden_dic['x0'] = hidden_x0
-    hidden_dic['x1'] = hidden_x1
+#     hidden_dic = {}
+#     hidden_dic['x0'] = hidden_x0
+#     hidden_dic['x1'] = hidden_x1
     
-    ######################## start to build models ##########################
-    ### prior to combine Z and X
-    # x
-    for j in range(K):
-        layer_name = 'x'+str(j)
-        hidden_j = hidden_dic[layer_name]    
-        for i in range(M):
-            name = 'hidden_'+ layer_name + '_'+ str(i)
-            hidden_j = standard_hidden_layer(hidden_j, n_hidden, l1_const, dropout_rate, batch_normalization, name)
-        hidden_dic[layer_name] = hidden_j    
-    # for the final output...note that last layer has no regularization. Should I still use regularization here???
-    for j in range(K):
-        layer_name = 'x'+str(j)
-        hidden_j = hidden_dic[layer_name]
-        regularizer = tf.contrib.layers.l1_regularizer(scale=l1_const)
-        output_j = tf.layers.dense(hidden_j, 1, name = 'output'+layer_name, kernel_regularizer = regularizer)
-        hidden_dic[layer_name] = output_j
-    output = tf.concat([hidden_dic['x0'], hidden_dic['x1']], axis = 1, name = 'output')
+#     ######################## start to build models ##########################
+#     ### prior to combine Z and X
+#     # x
+#     for j in range(K):
+#         layer_name = 'x'+str(j)
+#         hidden_j = hidden_dic[layer_name]    
+#         for i in range(M):
+#             name = 'hidden_'+ layer_name + '_'+ str(i)
+#             hidden_j = standard_hidden_layer(hidden_j, n_hidden, l1_const, dropout_rate, batch_normalization, name)
+#         hidden_dic[layer_name] = hidden_j    
+#     # for the final output...note that last layer has no regularization. Should I still use regularization here???
+#     for j in range(K):
+#         layer_name = 'x'+str(j)
+#         hidden_j = hidden_dic[layer_name]
+#         regularizer = tf.contrib.layers.l1_regularizer(scale=l1_const)
+#         output_j = tf.layers.dense(hidden_j, 1, name = 'output'+layer_name, kernel_regularizer = regularizer)
+#         hidden_dic[layer_name] = output_j
+#     output = tf.concat([hidden_dic['x0'], hidden_dic['x1']], axis = 1, name = 'output')
     
-    # add l2 regularization here
-    l2_regularization = tf.contrib.layers.l2_regularizer(scale = l2_const, scope=None)
-    vars_ = tf.trainable_variables()
-    weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
-    regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
+#     # add l2 regularization here
+#     l2_regularization = tf.contrib.layers.l2_regularizer(scale = l2_const, scope=None)
+#     vars_ = tf.trainable_variables()
+#     weights = [var_ for var_ in vars_ if 'kernel' in var_.name]
+#     regularization_penalty = tf.contrib.layers.apply_regularization(l2_regularization, weights)
     
-    with tf.name_scope("cost"):
-        cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits = output, labels = Y), name = 'cost')
-        cost += tf.losses.get_regularization_loss()
-        cost += regularization_penalty
+#     with tf.name_scope("cost"):
+#         cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits = output, labels = Y), name = 'cost')
+#         cost += tf.losses.get_regularization_loss()
+#         cost += regularization_penalty
         
-    with tf.name_scope("eval"):
-        correct = tf.nn.in_top_k(output, Y, 1)
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+#     with tf.name_scope("eval"):
+#         correct = tf.nn.in_top_k(output, Y, 1)
+#         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
     
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate) # opt objective
-    training_op = optimizer.minimize(cost) # minimize the opt objective
-    init = tf.global_variables_initializer()
+#     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate) # opt objective
+#     training_op = optimizer.minimize(cost) # minimize the opt objective
+#     init = tf.global_variables_initializer()
     
-    ######################## start to train models ##########################    
-    with tf.Session() as sess:
-        # always run this to train the model
-        init.run()
-        for i in range(n_iterations):
-            if i % 500 == 0:
-                print("Epoch", i, "Cost = ", cost.eval(feed_dict = {X0: X0_train, X1: X1_train,Y: Y_train}))
-            # gradient descent
-            X0_batch, X1_batch, Y_batch = \
-                                        obtain_mini_batch_dnn_alt_specific_train(X0_train,X1_train,Y_train,n_mini_batch)
-            sess.run(training_op, feed_dict = {X0: X0_batch, X1: X1_batch, Y: Y_batch})
-        ### compute prediction accuracy
-        train_accuracy = accuracy.eval(feed_dict = {X0: X0_train, X1: X1_train, Y: Y_train})
-        validation_accuracy = accuracy.eval(feed_dict = {X0: X0_validation, X1: X1_validation, Y: Y_validation})
-        test_accuracy = accuracy.eval(feed_dict = {X0: X0_test, X1: X1_test,Y: Y_test})
+#     ######################## start to train models ##########################    
+#     with tf.Session() as sess:
+#         # always run this to train the model
+#         init.run()
+#         for i in range(n_iterations):
+#             if i % 500 == 0:
+#                 print("Epoch", i, "Cost = ", cost.eval(feed_dict = {X0: X0_train, X1: X1_train,Y: Y_train}))
+#             # gradient descent
+#             X0_batch, X1_batch, Y_batch = \
+#                                         obtain_mini_batch_dnn_alt_specific_train(X0_train,X1_train,Y_train,n_mini_batch)
+#             sess.run(training_op, feed_dict = {X0: X0_batch, X1: X1_batch, Y: Y_batch})
+#         ### compute prediction accuracy
+#         train_accuracy = accuracy.eval(feed_dict = {X0: X0_train, X1: X1_train, Y: Y_train})
+#         validation_accuracy = accuracy.eval(feed_dict = {X0: X0_validation, X1: X1_validation, Y: Y_validation})
+#         test_accuracy = accuracy.eval(feed_dict = {X0: X0_test, X1: X1_test,Y: Y_test})
         
-        ### compute probability curves by simulated data
-        delta_cost = 0.01
-        delta_ivt = 0.01
-        train_0_cost_idx = 0
-        train_0_ivt_idx = 1
-        # only use X3_test because it is about driving cost and ivt.
-        N_cost = np.int((np.max(X0_test[:,train_0_cost_idx]) - np.min(X0_test[:,train_0_cost_idx]))/delta_cost) + 1
-        N_ivt = np.int((np.max(X0_test[:,train_0_ivt_idx]) - np.min(X0_test[:,train_0_ivt_idx]))/delta_ivt) + 1
+#         ### compute probability curves by simulated data
+#         delta_cost = 0.01
+#         delta_ivt = 0.01
+#         train_0_cost_idx = 0
+#         train_0_ivt_idx = 1
+#         # only use X3_test because it is about driving cost and ivt.
+#         N_cost = np.int((np.max(X0_test[:,train_0_cost_idx]) - np.min(X0_test[:,train_0_cost_idx]))/delta_cost) + 1
+#         N_ivt = np.int((np.max(X0_test[:,train_0_ivt_idx]) - np.min(X0_test[:,train_0_ivt_idx]))/delta_ivt) + 1
 
-        X0_data_cost = np.zeros((N_cost, D0))
-        X0_data_ivt = np.zeros((N_ivt, D0))
-        X0_data_cost[:, train_0_cost_idx] = np.arange(np.min(X0_test[:,train_0_cost_idx]), np.max(X0_test[:,train_0_cost_idx]), 0.01)
-        X0_data_ivt[:, train_0_ivt_idx] = np.arange(np.min(X0_test[:,train_0_ivt_idx]), np.max(X0_test[:,train_0_ivt_idx]), 0.01)
+#         X0_data_cost = np.zeros((N_cost, D0))
+#         X0_data_ivt = np.zeros((N_ivt, D0))
+#         X0_data_cost[:, train_0_cost_idx] = np.arange(np.min(X0_test[:,train_0_cost_idx]), np.max(X0_test[:,train_0_cost_idx]), 0.01)
+#         X0_data_ivt[:, train_0_ivt_idx] = np.arange(np.min(X0_test[:,train_0_ivt_idx]), np.max(X0_test[:,train_0_ivt_idx]), 0.01)
               
-        X1_data_cost = np.zeros((N_cost, D1))
-        X1_data_ivt = np.zeros((N_ivt, D1))
-        Y_data_cost = np.zeros(N_cost); Y_data_ivt = np.zeros(N_ivt)
-        # compute util and prob curves
-        util_matrix_cost = output.eval({X0: X0_data_cost, X1: X1_data_cost, Y: Y_data_cost})
-        prob_cost = np.exp(util_matrix_cost)/np.exp(util_matrix_cost).sum(1)[:,np.newaxis]
-        util_matrix_ivt = output.eval({X0: X0_data_ivt, X1: X1_data_ivt, Y: Y_data_ivt})
-        prob_ivt = np.exp(util_matrix_ivt)/np.exp(util_matrix_ivt).sum(1)[:,np.newaxis]
-    return train_accuracy,validation_accuracy,test_accuracy,prob_cost,prob_ivt
+#         X1_data_cost = np.zeros((N_cost, D1))
+#         X1_data_ivt = np.zeros((N_ivt, D1))
+#         Y_data_cost = np.zeros(N_cost); Y_data_ivt = np.zeros(N_ivt)
+#         # compute util and prob curves
+#         util_matrix_cost = output.eval({X0: X0_data_cost, X1: X1_data_cost, Y: Y_data_cost})
+#         prob_cost = np.exp(util_matrix_cost)/np.exp(util_matrix_cost).sum(1)[:,np.newaxis]
+#         util_matrix_ivt = output.eval({X0: X0_data_ivt, X1: X1_data_ivt, Y: Y_data_ivt})
+#         prob_ivt = np.exp(util_matrix_ivt)/np.exp(util_matrix_ivt).sum(1)[:,np.newaxis]
+#     return train_accuracy,validation_accuracy,test_accuracy,prob_cost,prob_ivt
 
 
 

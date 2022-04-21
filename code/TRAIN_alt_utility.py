@@ -180,28 +180,28 @@ for i in range(total_sample):
         Y_train, Y_val = generate_cross_validation_set(Y_train_validation, j, df = False)
 
         n_f = 5  # num of features
-        X0_train = X_train[:n_f]
-        X1_train = X_train[n_f:2*n_f]
-        X2_train = X_train[2*n_f:3*n_f]
-        X3_train = X_train[3*n_f:4*n_f]
-        X4_train = X_train[4*n_f:5*n_f]
-        Y_train = Y_train.reshape(-1)
+        X0_train = X_train[:,:n_f]
+        X1_train = X_train[:, n_f:2*n_f]
+        X2_train = X_train[:, 2*n_f:3*n_f]
+        X3_train = X_train[:, 3*n_f:4*n_f]
+        X4_train = X_train[:, 4*n_f:5*n_f]
+        Y_train = Y_train #.reshape(-1)
         Z_train = X_static_train
 
-        X0_val = X_val[:n_f]
-        X1_val = X_val[n_f:2*n_f]
-        X2_val = X_val[2*n_f:3*n_f]
-        X3_val = X_val[3*n_f:4*n_f]
-        X4_val = X_val[4*n_f:5*n_f]
-        Y_val = Y_val.reshape(-1)
+        X0_val = X_val[:, :n_f]
+        X1_val = X_val[:, n_f:2*n_f]
+        X2_val = X_val[:, 2*n_f:3*n_f]
+        X3_val = X_val[:, 3*n_f:4*n_f]
+        X4_val = X_val[:, 4*n_f:5*n_f]
+        Y_val = Y_val #.reshape(-1)
         Z_val = X_static_val
 
-        X0_test = X_test[:n_f]
-        X1_test = X_test[n_f:2*n_f]
-        X2_test = X_test[2*n_f:3*n_f]
-        X3_test = X_test[3*n_f:4*n_f]
-        X4_test = X_test[4*n_f:5*n_f]
-        Y_test = Y_test.reshape(-1)
+        X0_test = X_test[:, :n_f]
+        X1_test = X_test[:, n_f:2*n_f]
+        X2_test = X_test[:, 2*n_f:3*n_f]
+        X3_test = X_test[:, 3*n_f:4*n_f]
+        X4_test = X_test[:, 4*n_f:5*n_f]
+        Y_test = Y_test #.reshape(-1)
         Z_test = X_static_test
 
         # one estimation here
@@ -226,16 +226,16 @@ for i in range(total_sample):
 sparse_dnn_complete_time = time.time()
 
 # export the dictionary
-import pickle
-with open('output/full_dnn_results_finer.pickle', 'wb') as full_dnn_results_finer:
-    pickle.dump(full_dnn_dic, full_dnn_results_finer, protocol=pickle.HIGHEST_PROTOCOL)
-with open('output/sparse_dnn_results_finer.pickle', 'wb') as sparse_dnn_results_finer:
-    pickle.dump(sparse_dnn_dic, sparse_dnn_results_finer, protocol=pickle.HIGHEST_PROTOCOL)
-with open('output/classifiers_accuracy.pickle', 'wb') as data:
-    pickle.dump(classifiers_accuracy, data, protocol=pickle.HIGHEST_PROTOCOL)
+# import pickle
+# with open('output/full_dnn_results_finer.pickle', 'wb') as full_dnn_results_finer:
+#     pickle.dump(full_dnn_dic, full_dnn_results_finer, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('output/sparse_dnn_results_finer.pickle', 'wb') as sparse_dnn_results_finer:
+#     pickle.dump(sparse_dnn_dic, sparse_dnn_results_finer, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('output/classifiers_accuracy.pickle', 'wb') as data:
+#     pickle.dump(classifiers_accuracy, data, protocol=pickle.HIGHEST_PROTOCOL)
 
-print("Full DNN training time is: ", (full_dnn_complete_time - start_time)/3600) # 30 hours
-print("Sparse DNN training time is: ", (sparse_dnn_complete_time - full_dnn_complete_time)/3600) # 7 hours
+# print("Full DNN training time is: ", (full_dnn_complete_time - start_time)/3600) # 30 hours
+# print("Sparse DNN training time is: ", (sparse_dnn_complete_time - full_dnn_complete_time)/3600) # 7 hours
 
 
 
