@@ -968,7 +968,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         listTrainCost = []
         listValidCost = []
         for i in range(n_iterations):
-            if i % 500 == 0:
+            if i % 100 == 0:
                 # current_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
                 #                            Y: Y_train, Z: Z_train})
                 train_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
