@@ -953,9 +953,13 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         cost += regularization_penalty
 
     with tf.name_scope("eval"):
-        mse_validation = tf.keras.backend.mean(tf.keras.losses.MSE(Y, output_prob))
+        mse_validation = tf.keras.backend.mean(tf.keras.losses.MAE(Y, output_prob))
+        # mse_validation = tf.keras.backend.mean(tf.keras.metrics.MAPE(Y, output_prob))
         # correct = tf.nn.in_top_k(output, Y, 1)  # 如果模型最大概率的选项为真实选项，则认为正确 Says whether the targets are in the top K predictions.
         # accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+    
+    with tf.name_scope("test"):
+        predict_result = output_prob
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
     training_op = optimizer.minimize(cost)  # minimize the opt objective
@@ -990,18 +994,25 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         
         pd.DataFrame(listTrainCost).to_csv('train_mse.csv')
         pd.DataFrame(listValidCost).to_csv('validation_mse.csv')
-        raise Exception
+        # raise Exception
 
         ### compute prediction accuracy
-        train_accuracy = mse_eval.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
+        ### 最终模型指标
+        train_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
                                                   Y: Y_train, Z: Z_train})
-        validation_accuracy = mse_eval.eval(
+        validation_mse = mse_validation.eval(
             feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
                        Y: Y_validation, Z: Z_validation})
-        test_accuracy = mse_eval.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
+        test_mse = mse_validation.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
                                                  Y: Y_test, Z: Z_test})
+        
+        test_result = predict_result.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
+                                                 Y: Y_test, Z: Z_test})
+    
+        pd.DataFrame(test_result).to_csv('test_result.csv')
 
         ### compute probability curves by simulated data
+        ### 计算概率分布曲线
         delta_cost = 0.01
         delta_ivt = 0.01
         drive_cost_idx = 0
@@ -1040,8 +1051,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         prob_ivt = np.exp(util_matrix_ivt) / np.exp(util_matrix_ivt).sum(1)[:, np.newaxis]
     # return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
     
-
-    return train_accuracy, validation_accuracy, test_accuracy, prob_cost, prob_ivt
+    return train_mse, validation_mse, test_mse, prob_cost, prob_ivt
 
 
 ### build functions for mlogit Train datasets

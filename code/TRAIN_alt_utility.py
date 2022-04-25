@@ -1,3 +1,4 @@
+# TODO: 1. 超参数优化HPO  2. 记录每一个超参组合下的训练集、测试集曲线
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -92,6 +93,11 @@ X_static_test = X_static[np.int(n_index*5/6):, :] # 取后1/6作为测试集
 Y_train_validation = Y[:np.int(n_index*5/6)]
 Y_test = Y[np.int(n_index*5/6):]
 
+print(type(Y_test))
+
+pd.DataFrame(Y_test).to_csv('y_test.csv')
+
+
 ## test
 #train_set, validation_set = generate_cross_validation_set(df_sp_combined_train, 3)
 
@@ -127,24 +133,41 @@ x2_vars = ['transfer_time3', 'avg_time3', 'full_price3', 'via_stations3', 'hourl
 x3_vars = ['transfer_time4', 'avg_time4', 'full_price4', 'via_stations4', 'hourly_cnt4']
 x4_vars = ['transfer_time5', 'avg_time5', 'full_price5', 'via_stations5', 'hourly_cnt5']
 
-M_before_list = [0,1,2,3,4,5]
-M_after_list = [0,1,2,3,4,5]
-n_hidden_before_list = [10, 20, 40, 60, 80, 100]
-n_hidden_after_list = [10, 20, 40, 60, 80, 100]
-l1_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
-l2_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
-dropout_rate_list = [0.5, 0.1, 0.01, 1e-3, 1e-5] # 5
-batch_normalization_list = [True, False] # 2
-learning_rate_list = [0.01, 1e-3, 1e-4, 1e-5] # 5
+# M_before_list = [0,1,2,3,4,5]
+# M_after_list = [0,1,2,3,4,5]
+# n_hidden_before_list = [10, 20, 40, 60, 80, 100]
+# n_hidden_after_list = [10, 20, 40, 60, 80, 100]
+# l1_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
+# l2_const_list = [1e-3, 1e-5, 1e-10, 1e-20]# 8
+# dropout_rate_list = [0.5, 0.1, 0.01, 1e-3, 1e-5] # 5
+# batch_normalization_list = [True, False] # 2
+# learning_rate_list = [0.01, 1e-3, 1e-4, 1e-5] # 5
+# # n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
+# n_iteration_list = [5000, 10000, 50000, 100000, 200000] # 5
+# # n_iteration_list = [100000, 100000, 100000, 100000, 100000] # 5
+# n_mini_batch_list = [50, 100, 200, 500, 1000] # 5
+
+
+M_before_list = [5]
+M_after_list = [5]
+n_hidden_before_list = [80]
+n_hidden_after_list = [60]
+l1_const_list = [1e-10]# 8
+l2_const_list = [1e-10]# 8
+dropout_rate_list = [0.01] # 5
+batch_normalization_list = [True] # 2
+learning_rate_list = [1e-4] # 5
 # n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
-n_iteration_list = [5000, 10000, 50000, 100000, 200000] # 5
+n_iteration_list = [60000] # 5
 # n_iteration_list = [100000, 100000, 100000, 100000, 100000] # 5
-n_mini_batch_list = [50, 100, 200, 500, 1000] # 5
+n_mini_batch_list = [100] # 5
+
 
 # random draw...and HPO -- HyperParameter Optimization
 total_sample = 50 # could change...in total it has 250 training.
 sparse_dnn_dic = {}
-for i in range(total_sample):
+# for i in range(total_sample):
+for i in range(1):
     print("------------------------")
     print("Estimate sparse connected model ", str(i))
 
@@ -175,7 +198,8 @@ for i in range(total_sample):
     sparse_dnn_dic[i]['n_mini_batch'] = n_mini_batch
     print(sparse_dnn_dic[i])              
 
-    for j in range(5):
+    # for j in range(5):   # 交叉验证   每次提取不同的训练集/验证集
+    for j in range(1):   # 交叉验证   每次提取不同的训练集/验证集
         # five fold training with cross validation
         # df_sp_train,df_sp_validation = generate_cross_validation_set(df_sp_combined_train, j)
 
