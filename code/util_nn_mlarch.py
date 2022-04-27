@@ -627,7 +627,7 @@ def standard_combine_x_z_layer(input_x, input_z, n_hidden_after, l1_const, dropo
     hidden = tf.layers.dropout(inputs = hidden, rate = dropout_rate)
     return hidden
 
-def obtain_mini_batch_dnn_alt_specific(X0,X1,X2,X3,X4,Y,Z, n_mini_batch):
+def obtain_mini_batch_dnn_alt_specific(X0,X1,X2,X3,X4,Y,Z,rawX, n_mini_batch):
     '''
     Return mini_batch
     assume that the row numbers of all input df are the same
@@ -641,7 +641,8 @@ def obtain_mini_batch_dnn_alt_specific(X0,X1,X2,X3,X4,Y,Z, n_mini_batch):
     X4_batch = X4[index, :]
     Z_batch = Z[index, :]
     Y_batch = Y[index]
-    return X0_batch, X1_batch, X2_batch, X3_batch, X4_batch, Z_batch, Y_batch
+    rawX_batch = rawX[index]
+    return X0_batch, X1_batch, X2_batch, X3_batch, X4_batch, Z_batch, Y_batch, rawX_batch
 
 def generate_numerical_x_delta(X, delta, x_col_numbers):
     '''
@@ -846,10 +847,9 @@ def dnn_alt_spec_elasticity(X0_train,X1_train,X2_train,X3_train,X4_train,Y_train
     return pd.DataFrame(elast_records)
 
 
-def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_train, Z_train,
-                            X0_validation, X1_validation, X2_validation, X3_validation, X4_validation, Y_validation,
-                            Z_validation,
-                            X0_test, X1_test, X2_test, X3_test, X4_test, Y_test, Z_test,
+def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_train, Z_train, rawX_train,
+                            X0_validation, X1_validation, X2_validation, X3_validation, X4_validation, Y_validation, Z_validation, rawX_validation,
+                            X0_test, X1_test, X2_test, X3_test, X4_test, Y_test, Z_test, rawX_test,
                             M_before, M_after, n_hidden_before, n_hidden_after, l1_const, l2_const,
                             dropout_rate, batch_normalization, learning_rate, n_iterations, n_mini_batch):
     '''
@@ -864,6 +864,8 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     N, D4 = X4_train.shape
     N, DZ = Z_train.shape
     N, DY = Y_train.shape
+    # N, DrawX = rawX_train.shape
+    N, DrawX = rawX_train.shape
 
     # K = 5 # default
 
@@ -874,6 +876,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     X4 = tf.placeholder(dtype=tf.float32, shape=(None, D4), name='X4')
     Z = tf.placeholder(dtype=tf.float32, shape=(None, DZ), name='Z')
     Y = tf.placeholder(dtype=tf.float32, shape=(None, DY), name='Y')
+    rawX = tf.placeholder(dtype=tf.float32, shape=(None, DrawX), name='rawX')
 
     hidden_x0 = X0
     hidden_x1 = X1
@@ -881,6 +884,7 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     hidden_x3 = X3
     hidden_x4 = X4
     hidden_z = Z
+    raw_z = rawX
 
     hidden_dic = {}
     hidden_dic['x0'] = hidden_x0
@@ -935,6 +939,8 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
                        axis=1, name='output')
     output_prob = tf.nn.softmax(output)
 
+    output_final = tf.math.multiply(raw_z[:, -1][np.newaxis, -1], output_prob)  
+
     # add l2 regularization here
     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
     vars_ = tf.trainable_variables()
@@ -944,7 +950,8 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
     with tf.name_scope("cost"):
         # cost = tf.nn.l2_loss(Y, output_prob)
         # cost = tf.reduce_mean(tf.squared_difference(Y, output_prob), name='cost')
-        cost = tf.keras.backend.sum(tf.keras.losses.MSE(Y, output_prob))
+        # cost = tf.keras.backend.sum(tf.keras.losses.MSE(Y, output_prob))
+        cost = tf.keras.backend.sum(tf.keras.losses.MSE(Y, output_final))
         # print('###cost: ', end='')
         # print(cost)
 
@@ -953,13 +960,15 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         cost += regularization_penalty
 
     with tf.name_scope("eval"):
-        mse_validation = tf.keras.backend.mean(tf.keras.losses.MAE(Y, output_prob))
+        # mse_validation = tf.keras.backend.mean(tf.keras.losses.MAE(Y, output_prob))
+        mse_validation = tf.keras.backend.mean(tf.keras.losses.MAE(Y, output_final))
         # mse_validation = tf.keras.backend.mean(tf.keras.metrics.MAPE(Y, output_prob))
         # correct = tf.nn.in_top_k(output, Y, 1)  # 如果模型最大概率的选项为真实选项，则认为正确 Says whether the targets are in the top K predictions.
         # accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
     
     with tf.name_scope("test"):
-        predict_result = output_prob
+        # predict_result = output_prob
+        predict_result = output_final
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  # opt objective
     training_op = optimizer.minimize(cost)  # minimize the opt objective
@@ -976,21 +985,21 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
                 # current_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
                 #                            Y: Y_train, Z: Z_train})
                 train_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
-                                                  Y: Y_train, Z: Z_train})
+                                                  Y: Y_train, Z: Z_train, rawX:rawX_train})
                 validation_mse = mse_validation.eval(
                 feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
-                        Y: Y_validation, Z: Z_validation})
+                        Y: Y_validation, Z: Z_validation, rawX:rawX_validation})
                 print("Epoch", i, "train_mse = ", train_mse)
                 print("Epoch", i, "valid_mse = ", validation_mse)
                 listTrainCost.append(train_mse)
                 listValidCost.append(validation_mse)
 
             # gradient descent
-            X0_batch, X1_batch, X2_batch, X3_batch, X4_batch, Z_batch, Y_batch = \
-                obtain_mini_batch_dnn_alt_specific(X0_train, X1_train, X2_train, X3_train, X4_train, Y_train, Z_train,
+            X0_batch, X1_batch, X2_batch, X3_batch, X4_batch, Z_batch, Y_batch, rawX_batch = \
+                obtain_mini_batch_dnn_alt_specific(X0_train, X1_train, X2_train, X3_train, X4_train, Y_train, Z_train, rawX_train,
                                                    n_mini_batch)
             sess.run(training_op, feed_dict={X0: X0_batch, X1: X1_batch, X2: X2_batch, X3: X3_batch, X4: X4_batch,
-                                             Y: Y_batch, Z: Z_batch})
+                                             Y: Y_batch, Z: Z_batch, rawX:rawX_batch})
         
         pd.DataFrame(listTrainCost).to_csv('train_mse.csv')
         pd.DataFrame(listValidCost).to_csv('validation_mse.csv')
@@ -999,15 +1008,15 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
         ### compute prediction accuracy
         ### 最终模型指标
         train_mse = mse_validation.eval(feed_dict={X0: X0_train, X1: X1_train, X2: X2_train, X3: X3_train, X4: X4_train,
-                                                  Y: Y_train, Z: Z_train})
+                                                  Y: Y_train, Z: Z_train, rawX:rawX_train})
         validation_mse = mse_validation.eval(
             feed_dict={X0: X0_validation, X1: X1_validation, X2: X2_validation, X3: X3_validation, X4: X4_validation,
-                       Y: Y_validation, Z: Z_validation})
+                       Y: Y_validation, Z: Z_validation, rawX: rawX_validation})
         test_mse = mse_validation.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
-                                                 Y: Y_test, Z: Z_test})
+                                                 Y: Y_test, Z: Z_test, rawX:rawX_test})
         
         test_result = predict_result.eval(feed_dict={X0: X0_test, X1: X1_test, X2: X2_test, X3: X3_test, X4: X4_test,
-                                                 Y: Y_test, Z: Z_test})
+                                                 Y: Y_test, Z: Z_test, rawX:rawX_test})
     
         pd.DataFrame(test_result).to_csv('test_result.csv')
 

@@ -30,7 +30,8 @@ np.random.shuffle(n_index_shuffle)
 data_shuffled = df 
 data_shuffled = df.iloc[n_index_shuffle, :]
 
-data_shuffled_Truth = dfTruth[['od_ratio1', 'od_ratio2', 'od_ratio3', 'od_ratio4', 'od_ratio5']]
+# data_shuffled_Truth = dfTruth[['od_ratio1', 'od_ratio2', 'od_ratio3', 'od_ratio4', 'od_ratio5']]
+data_shuffled_Truth = dfTruth[['cnt1', 'cnt2', 'cnt3', 'cnt4', 'cnt5']]
 data_shuffled_Truth = data_shuffled_Truth.iloc[n_index_shuffle, :]
 data_shuffled_Truth.fillna(0, inplace=True)
 
@@ -40,7 +41,7 @@ useful_vars = ['transfer_time1', 'avg_time1', 'full_price1', 'via_stations1', 'h
                'transfer_time4', 'avg_time4', 'full_price4', 'via_stations4', 'hourly_cnt4',
                'transfer_time5', 'avg_time5', 'full_price5', 'via_stations5', 'hourly_cnt5']
 
-static_vars = ['hour_', 'normal_ratio', 'eld_ratio']
+static_vars = ['hour_', 'normal_ratio', 'eld_ratio', 'total_cnt']
 
 data_shuffled_useful_vars = data_shuffled[useful_vars]
 # data_shuffled_useful_vars.dropna(axis = 0, how = 'any', inplace = True)
@@ -51,6 +52,7 @@ data_shuffled_static_vars = data_shuffled[static_vars]
 X = preprocessing.scale(data_shuffled_useful_vars.values)
 X_static = preprocessing.scale(data_shuffled_static_vars.values)
 Y = data_shuffled_Truth.values
+rawX = data_shuffled_static_vars.values #[:, -1]
 
 def generate_cross_validation_set(data, validation_index, df = True):
     '''
@@ -93,6 +95,9 @@ X_static_test = X_static[np.int(n_index*5/6):, :] # 取后1/6作为测试集
 Y_train_validation = Y[:np.int(n_index*5/6)]
 Y_test = Y[np.int(n_index*5/6):]
 
+rawX_train_validation = rawX[:np.int(n_index*5/6)]
+rawX_test = rawX[np.int(n_index*5/6):]
+
 print(type(Y_test))
 
 pd.DataFrame(Y_test).to_csv('y_test.csv')
@@ -126,7 +131,7 @@ from sklearn.metrics import accuracy_score
 # note: [0,1,2,3,4] meaning [walk,bus,ridesharing,drive,av]
 
 # y_vars = ['choice']
-z_vars = ['hour_', 'normal_ratio', 'eld_ratio']
+z_vars = ['hour_', 'normal_ratio', 'eld_ratio', 'total_cnt']
 x0_vars = ['transfer_time1', 'avg_time1', 'full_price1', 'via_stations1', 'hourly_cnt1']
 x1_vars = ['transfer_time2', 'avg_time2', 'full_price2', 'via_stations2', 'hourly_cnt2']
 x2_vars = ['transfer_time3', 'avg_time3', 'full_price3', 'via_stations3', 'hourly_cnt3']
@@ -156,11 +161,11 @@ l1_const_list = [1e-10]# 8
 l2_const_list = [1e-10]# 8
 dropout_rate_list = [0.01] # 5
 batch_normalization_list = [True] # 2
-learning_rate_list = [1e-4] # 5
+learning_rate_list = [1e-5] # 5
 # n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
-n_iteration_list = [60000] # 5
+n_iteration_list = [10000] # 5
 # n_iteration_list = [100000, 100000, 100000, 100000, 100000] # 5
-n_mini_batch_list = [100] # 5
+n_mini_batch_list = [200] # 5
 
 
 # random draw...and HPO -- HyperParameter Optimization
@@ -206,6 +211,7 @@ for i in range(1):
         X_train, X_val = generate_cross_validation_set(X_train_validation, j, df = False)
         X_static_train, X_static_val = generate_cross_validation_set(X_static_train_validation, j, df = False)
         Y_train, Y_val = generate_cross_validation_set(Y_train_validation, j, df = False)
+        rawX_train, rawX_val = generate_cross_validation_set(rawX_train_validation, j, df = False)
 
         n_f = 5  # num of features
         X0_train = X_train[:,:n_f]
@@ -234,9 +240,9 @@ for i in range(1):
 
         # one estimation here
         train_accuracy,validation_accuracy,test_accuracy,prob_cost,prob_ivt = \
-                    util.dnn_alt_spec_estimation(X0_train,X1_train,X2_train,X3_train,X4_train,Y_train,Z_train,
-                                            X0_val,X1_val,X2_val,X3_val,X4_val,Y_val,Z_val,
-                                            X0_test,X1_test,X2_test,X3_test,X4_test,Y_test,Z_test,
+                    util.dnn_alt_spec_estimation(X0_train,X1_train,X2_train,X3_train,X4_train,Y_train,Z_train,rawX_train,
+                                            X0_val,X1_val,X2_val,X3_val,X4_val,Y_val,Z_val,rawX_val,
+                                            X0_test,X1_test,X2_test,X3_test,X4_test,Y_test,Z_test,rawX_test,
                                             M_before,M_after,n_hidden_before,n_hidden_after,l1_const,l2_const,
                                             dropout_rate,batch_normalization,learning_rate,n_iteration,n_mini_batch)
 
