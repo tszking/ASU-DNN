@@ -939,7 +939,11 @@ def dnn_alt_spec_estimation(X0_train, X1_train, X2_train, X3_train, X4_train, Y_
                        axis=1, name='output')
     output_prob = tf.nn.softmax(output)
 
-    output_final = tf.math.multiply(raw_z[:, -1][np.newaxis, -1], output_prob)  
+    dense_z = tf.layers.dense(raw_z, 1, name='squeeze_rawz')
+
+    output_final = tf.math.multiply(dense_z, output_prob)  
+    # output_final = tf.math.multiply(raw_z[:, -1][np.newaxis, -1], output_prob)  
+    # output_final = tf.math.multiply(raw_z[:,-1][:, -1], output_prob)  
 
     # add l2 regularization here
     l2_regularization = tf.contrib.layers.l2_regularizer(scale=l2_const, scope=None)
