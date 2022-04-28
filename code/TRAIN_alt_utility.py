@@ -52,7 +52,7 @@ data_shuffled_static_vars = data_shuffled[static_vars]
 X = preprocessing.scale(data_shuffled_useful_vars.values)
 X_static = preprocessing.scale(data_shuffled_static_vars.values)
 Y = data_shuffled_Truth.values
-rawX = data_shuffled_static_vars.values #[:, -1]
+rawX = data_shuffled_static_vars.values[:, -1][:, np.newaxis]
 
 def generate_cross_validation_set(data, validation_index, df = True):
     '''
@@ -163,7 +163,7 @@ dropout_rate_list = [0.01] # 5
 batch_normalization_list = [True] # 2
 learning_rate_list = [1e-5] # 5
 # n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
-n_iteration_list = [50000] # 5
+n_iteration_list = [10000] # 5
 # n_iteration_list = [100000, 100000, 100000, 100000, 100000] # 5
 n_mini_batch_list = [200] # 5
 
