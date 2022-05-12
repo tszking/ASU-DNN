@@ -67,36 +67,41 @@ def generate_cross_validation_set(data, validation_index, df = True):
     data_shuffled = data # may not need to shuffle the data...
 #    data_shuffled = data.loc[n_index_shuffle, :]
     # use validation index to split; validation index: 0,1,2,3,4
+
+    NFOLD = 6
     if df == True:
         if len(data.shape) > 1:
-            validation_set = data_shuffled.iloc[np.int(n_index/5)*validation_index:np.int(n_index/5)*(validation_index+1), :]
-            train_set = pd.concat([data_shuffled.iloc[: np.int(n_index/5)*validation_index, :], 
-                                                         data_shuffled.iloc[np.int(n_index/5)*(validation_index+1):, :]]) 
+            validation_set = data_shuffled.iloc[np.int(n_index/NFOLD)*validation_index:np.int(n_index/NFOLD)*(validation_index+1), :]
+            train_set = pd.concat([data_shuffled.iloc[: np.int(n_index/NFOLD)*validation_index, :], 
+                                                         data_shuffled.iloc[np.int(n_index/NFOLD)*(validation_index+1):, :]]) 
         elif len(data.shape) == 1:
-            validation_set = data_shuffled.iloc[np.int(n_index/5)*validation_index:np.int(n_index/5)*(validation_index+1)]
-            train_set = pd.concat([data_shuffled.iloc[: np.int(n_index/5)*validation_index], 
-                                                         data_shuffled.iloc[np.int(n_index/5)*(validation_index+1):]])    
+            validation_set = data_shuffled.iloc[np.int(n_index/NFOLD)*validation_index:np.int(n_index/NFOLD)*(validation_index+1)]
+            train_set = pd.concat([data_shuffled.iloc[: np.int(n_index/NFOLD)*validation_index], 
+                                                         data_shuffled.iloc[np.int(n_index/NFOLD)*(validation_index+1):]])    
     elif df == False:
         if len(data.shape) > 1:
-            validation_set = data_shuffled[np.int(n_index/5)*validation_index:np.int(n_index/5)*(validation_index+1), :]
-            train_set = np.concatenate([data_shuffled[: np.int(n_index/5)*validation_index, :], 
-                                                         data_shuffled[np.int(n_index/5)*(validation_index+1):, :]]) 
+            validation_set = data_shuffled[np.int(n_index/NFOLD)*validation_index:np.int(n_index/NFOLD)*(validation_index+1), :]
+            train_set = np.concatenate([data_shuffled[: np.int(n_index/NFOLD)*validation_index, :], 
+                                                         data_shuffled[np.int(n_index/NFOLD)*(validation_index+1):, :]]) 
         elif len(data.shape) == 1:
-            validation_set = data_shuffled[np.int(n_index/5)*validation_index:np.int(n_index/5)*(validation_index+1)]
-            train_set = np.concatenate([data_shuffled[: np.int(n_index/5)*validation_index], 
-                                                         data_shuffled[np.int(n_index/5)*(validation_index+1):]])           
+            validation_set = data_shuffled[np.int(n_index/NFOLD)*validation_index:np.int(n_index/NFOLD)*(validation_index+1)]
+            train_set = np.concatenate([data_shuffled[: np.int(n_index/NFOLD)*validation_index], 
+                                                         data_shuffled[np.int(n_index/NFOLD)*(validation_index+1):]])           
     
     return train_set,validation_set
 
-X_train_validation = X[:np.int(n_index*5/6), :]  # 取前5/6作为训练集/验证集
-X_test = X[np.int(n_index*5/6):, :] # 取后1/6作为测试集
-X_static_train_validation = X_static[:np.int(n_index*5/6), :]  # 取前5/6作为训练集/验证集
-X_static_test = X_static[np.int(n_index*5/6):, :] # 取后1/6作为测试集
-Y_train_validation = Y[:np.int(n_index*5/6)]
-Y_test = Y[np.int(n_index*5/6):]
 
-rawX_train_validation = rawX[:np.int(n_index*5/6)]
-rawX_test = rawX[np.int(n_index*5/6):]
+TVP = 7/8  # train & valid portion
+
+X_train_validation = X[:np.int(n_index*TVP), :]  # 取前5/6作为训练集/验证集
+X_test = X[np.int(n_index*TVP):, :] # 取后1/6作为测试集
+X_static_train_validation = X_static[:np.int(n_index*TVP), :]  # 取前5/6作为训练集/验证集
+X_static_test = X_static[np.int(n_index*TVP):, :] # 取后1/6作为测试集
+Y_train_validation = Y[:np.int(n_index*TVP)]
+Y_test = Y[np.int(n_index*TVP):]
+
+rawX_train_validation = rawX[:np.int(n_index*TVP)]
+rawX_test = rawX[np.int(n_index*TVP):]
 
 print(type(Y_test))
 
@@ -153,19 +158,19 @@ x4_vars = ['transfer_time5', 'avg_time5', 'full_price5', 'via_stations5', 'hourl
 # n_mini_batch_list = [50, 100, 200, 500, 1000] # 5
 
 
-M_before_list = [5]
-M_after_list = [5]
+M_before_list = [16]
+M_after_list = [8]
 n_hidden_before_list = [80]
 n_hidden_after_list = [60]
 l1_const_list = [1e-10]# 8
 l2_const_list = [1e-10]# 8
 dropout_rate_list = [0.01] # 5
 batch_normalization_list = [True] # 2
-learning_rate_list = [1e-5] # 5
+learning_rate_list = [1e-6] # 5
 # n_iteration_list = [500, 1000, 5000, 10000, 20000] # 5
-n_iteration_list = [10000] # 5
+n_iteration_list = [20000] # 5
 # n_iteration_list = [100000, 100000, 100000, 100000, 100000] # 5
-n_mini_batch_list = [200] # 5
+n_mini_batch_list = [256] # 5
 
 
 # random draw...and HPO -- HyperParameter Optimization
